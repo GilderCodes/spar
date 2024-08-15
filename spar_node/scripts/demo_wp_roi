@@ -224,7 +224,7 @@ class Guidance():
 		if not self.performing_roi:
 			# If the last segment has succeeded.
 			# For more complex tasks, it might be necessary to also
-			# check if you are in waypoint or diversion mode here.
+			# check if you are in waypoint or BreadCrumb mode here.
 			# Hint: really, we should check for other status states
 			#		(such as aborted), as there are some states
 			#		where we won't recover from, and should just exit
