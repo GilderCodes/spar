@@ -56,6 +56,13 @@ class Guidance():
 		rospy.loginfo("Waiting for spar...")
 		self.spar_client.wait_for_server()
 
+		# DEMO_WP_ROI WONT RUN UNTIL BREADCRUMB CONNECTION
+		# Wait to connect with Breadcrumb
+		# Code will error if you try to connect to a service
+		# that does not exist
+		rospy.wait_for_service('/breadcrumb/request_path')
+		self.srvc_bc = rospy.ServiceProxy('/breadcrumb/request_path', RequestPath)
+
 		if not rospy.is_shutdown():
 			# Good to go, start mission
 			rospy.loginfo("Starting waypoint mission")
