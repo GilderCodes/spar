@@ -84,7 +84,7 @@ class Guidance():
 	def check_waypoints(self, wps):
 		# Make sure waypoints are a list
 		if not isinstance(wps, list):
-			rospy.logwarn("Waypoints are not list")
+			rospy.logwarn("Waypoints are not list of coordinates")
 			return False
 
 		# Make sure we have at least one waypoint
