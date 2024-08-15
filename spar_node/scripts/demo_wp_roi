@@ -244,42 +244,43 @@ class Guidance():
 			if self.spar_client.get_state() == GoalStatus.SUCCEEDED:
 				rospy.loginfo("Reached waypoint %i!" % (self.waypoint_counter))
 
-				req = RequestPathRequest()
-				req.start.x = self.waypoints[self.waypoint_counter-1][0] # Getting X
-				req.start.y = self.waypoints[self.waypoint_counter-1][1] # Getting Y
-				req.start.z = self.waypoints[self.waypoint_counter-1][2] # Getting Z
-				req.end.x = self.waypoints[self.waypoint_counter][0] # Getting Next X
-				req.end.y = self.waypoints[self.waypoint_counter][1] # Getting Next Y
-				req.end.z = self.waypoints[self.waypoint_counter][2] # Getting Next Z
-		
-				res = self.srvc_bc(req)
-
-				# Breadcrumb will return a vector of poses if a solution was found
-				# If no solution was found (i.e. no solution, or request bad
-				# start/end), then breadcrumb returns and empty vector
-				# XXX: You could also use res.path_sparse (see breadcrumb docs)
-				if len(res.path.poses) > 0:
-					# Print the path to the screen
-					rospy.loginfo("Segment {}-1 to {}:", format(self.waypoint_counter,self.waypoint_counter))
-					rospy.loginfo("[%0.2f;%0.2f;%0.2f] => [%0.2f;%0.2f;%0.2f]",
-								  req.start.x,req.start.y,req.start.z,
-								  req.end.x,req.end.y,req.end.z)
-		
-					# Loop through the solution returned from breadcrumb
-					for i in range(len(res.path.poses) - 1):
-						rospy.loginfo("    [%0.2f;%0.2f;%0.2f]",
-									  res.path.poses[i].position.x,
-									  res.path.poses[i].position.y,
-									  res.path.poses[i].position.z)
-				else:
-					rospy.logerr("solution not found")
-
 				# XXX:	Another check could go here to finish the mission early
 				#		if "all" inspection tasks have been completed
 				#		(Add in another "if" and make the waypoint counter check
 				#		 an "elif" check instead.
 				#		 i.e. if complete; elif more wps; else wps finished)
 				if self.waypoint_counter < (len(self.waypoints)):
+	
+					req = RequestPathRequest()
+					req.start.x = self.waypoints[self.waypoint_counter-1][0] # Getting X
+					req.start.y = self.waypoints[self.waypoint_counter-1][1] # Getting Y
+					req.start.z = self.waypoints[self.waypoint_counter-1][2] # Getting Z
+					req.end.x = self.waypoints[self.waypoint_counter][0] # Getting Next X
+					req.end.y = self.waypoints[self.waypoint_counter][1] # Getting Next Y
+					req.end.z = self.waypoints[self.waypoint_counter][2] # Getting Next Z
+			
+					res = self.srvc_bc(req)
+	
+					# Breadcrumb will return a vector of poses if a solution was found
+					# If no solution was found (i.e. no solution, or request bad
+					# start/end), then breadcrumb returns and empty vector
+					# XXX: You could also use res.path_sparse (see breadcrumb docs)
+					if len(res.path.poses) > 0:
+						# Print the path to the screen
+						rospy.loginfo("Segment {}-1 to {}:", format(self.waypoint_counter,self.waypoint_counter))
+						rospy.loginfo("[%0.2f;%0.2f;%0.2f] => [%0.2f;%0.2f;%0.2f]",
+									  req.start.x,req.start.y,req.start.z,
+									  req.end.x,req.end.y,req.end.z)
+			
+						# Loop through the solution returned from breadcrumb
+						for i in range(len(res.path.poses) - 1):
+							rospy.loginfo("    [%0.2f;%0.2f;%0.2f]",
+										  res.path.poses[i].position.x,
+										  res.path.poses[i].position.y,
+										  res.path.poses[i].position.z)
+					else:
+						rospy.logerr("solution not found")
+
 					self.send_wp(self.waypoints[self.waypoint_counter])
 					# Increment our waypoint counter
 					self.waypoint_counter += 1
