@@ -57,6 +57,7 @@ class Guidance():
 		self.spar_client.wait_for_server()
 
 		# DEMO_WP_ROI WILL NOT RUN UNTIL BREADCRUMB CONNECTION (might get stuck if breadcrumb is not running)
+		# ENSURE breadcrumb.launch, qutas, spar, uavemulator, environment.launch || ensure all are launched  :)
 		# Wait to connect with Breadcrumb
 		# Code will error if you try to connect to a service
 		# that does not exist
