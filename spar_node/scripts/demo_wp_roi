@@ -56,7 +56,7 @@ class Guidance():
 		rospy.loginfo("Waiting for spar...")
 		self.spar_client.wait_for_server()
 
-		# DEMO_WP_ROI WONT RUN UNTIL BREADCRUMB CONNECTION
+		# DEMO_WP_ROI WILL NOT RUN UNTIL BREADCRUMB CONNECTION (might get stuck if breadcrumb is not running)
 		# Wait to connect with Breadcrumb
 		# Code will error if you try to connect to a service
 		# that does not exist
