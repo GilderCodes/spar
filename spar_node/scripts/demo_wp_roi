@@ -244,6 +244,16 @@ class Guidance():
 			if self.spar_client.get_state() == GoalStatus.SUCCEEDED:
 				rospy.loginfo("Reached waypoint %i!" % (self.waypoint_counter))
 
+				req = RequestPathRequest()
+				req.start.x = self.waypoints[self.waypoint_counter-1][0] # Getting X
+				req.start.y = self.waypoints[self.waypoint_counter-1][1] # Getting Y
+				req.start.z = self.waypoints[self.waypoint_counter-1][2] # Getting Z
+				req.end.x = self.waypoints[self.waypoint_counter][0] # Getting Next X
+				req.end.y = self.waypoints[self.waypoint_counter][1] # Getting Next Y
+				req.end.z = self.waypoints[self.waypoint_counter][2] # Getting Next Z
+		
+				res = self.srvc_bc(req)
+
 				# XXX:	Another check could go here to finish the mission early
 				#		if "all" inspection tasks have been completed
 				#		(Add in another "if" and make the waypoint counter check
