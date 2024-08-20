@@ -75,6 +75,10 @@ class Guidance():
 			#		begin the mission at the first waypoint after take-off
 			self.send_wp(self.waypoints[0])
 			self.waypoint_counter += 1
+			# Initialise breadcrumb waypoints
+			self.breadcrumbWPSnextIndex = 0
+			self.breadcrumbMode = False
+			self.breadcrumbWPS = []
 
 			# Setup a timer to check if our waypoint has completed at 20Hz
 			self.timer = rospy.Timer( rospy.Duration(1.0/20.0), self.check_waypoint_status )
@@ -285,48 +289,58 @@ class Guidance():
 				#		 an "elif" check instead.
 				#		 i.e. if complete; elif more wps; else wps finished)
 				if self.waypoint_counter < (len(self.waypoints)):
-					
 
+					if not self.breacrumbMode:
+						# Set up a path request for breadcrumb
+						req = RequestPathRequest()
+						req.start.x = self.waypoints[self.waypoint_counter-1][0] # Get X
+						req.start.y = self.waypoints[self.waypoint_counter-1][1] # Get Y
+						req.start.z = self.waypoints[self.waypoint_counter-1][2] # Get Z
+						req.end.x = self.waypoints[self.waypoint_counter][0]	# Get next X
+						req.end.y = self.waypoints[self.waypoint_counter][1]	# Get next Y
+						req.end.z = self.waypoints[self.waypoint_counter][2]	# Get next Z
+	
+						res = self.srvc_bc(req)
+						
+						# Breadcrumb will return a vector of poses if a solution was found
+						# If no solution was found (i.e. no solution, or request bad
+						# start/end), then breadcrumb returns and empty vector
+						# XXX: You could also use res.path_sparse (see breadcrumb docs)
+						breadcrumbWPS = []
+						rospy.loginfo("Path length: {}".format(len(res.path_sparse.poses)))
+						if len(res.path.poses) > 0:
+							# Print the path to the screen
+							rospy.loginfo("Segment {} to {}:".format(self.waypoint_counter-1,self.waypoint_counter))
+							rospy.loginfo("[%0.2f;%0.2f;%0.2f] => [%0.2f;%0.2f;%0.2f]",
+										req.start.x,req.start.y,req.start.z,
+										req.end.x,req.end.y,req.end.z)
+	
+							# Loop through the solution returned from breadcrumb
+							for i in range(len(res.path.poses)):
+								rospy.loginfo("    [%0.2f;%0.2f;%0.2f]",
+											res.path.poses[i].position.x,
+											res.path.poses[i].position.y,
+											res.path.poses[i].position.z)
+								breadcrumbWPS.append([res.path.poses[i].position.x, res.path.poses[i].position.y, res.path.poses[i].position.z, 0.0])
 
-					# Set up a path request for breadcrumb
-					req = RequestPathRequest()
-					req.start.x = self.waypoints[self.waypoint_counter-1][0] # Get X
-					req.start.y = self.waypoints[self.waypoint_counter-1][1] # Get Y
-					req.start.z = self.waypoints[self.waypoint_counter-1][2] # Get Z
-					req.end.x = self.waypoints[self.waypoint_counter][0]	# Get next X
-					req.end.y = self.waypoints[self.waypoint_counter][1]	# Get next Y
-					req.end.z = self.waypoints[self.waypoint_counter][2]	# Get next Z
+							self.breadcrumbWPS = breadcrumbWPS
+							self.breadcrumbMode = True
+							self.breadcrumbWPSnextIndex = 0
+							self.send_wp(self.breadcrumbWPS[self.breadcrumbWPSnextIndex])
+							self.breadcrumbWPSnextIndex +=1
+						else:
+							rospy.logerr("solution not found")
+	
+						self.publish_breadcrumb(breadcrumbWPS)
 
-					res = self.srvc_bc(req)
-					
-					# Breadcrumb will return a vector of poses if a solution was found
-					# If no solution was found (i.e. no solution, or request bad
-					# start/end), then breadcrumb returns and empty vector
-					# XXX: You could also use res.path_sparse (see breadcrumb docs)
-					breadcrumbWPS = []
-					rospy.loginfo("Path length: {}".format(len(res.path_sparse.poses)))
-					if len(res.path.poses) > 0:
-						# Print the path to the screen
-						rospy.loginfo("Segment {} to {}:".format(self.waypoint_counter-1,self.waypoint_counter))
-						rospy.loginfo("[%0.2f;%0.2f;%0.2f] => [%0.2f;%0.2f;%0.2f]",
-									req.start.x,req.start.y,req.start.z,
-									req.end.x,req.end.y,req.end.z)
-
-						# Loop through the solution returned from breadcrumb
-						for i in range(len(res.path.poses)):
-							rospy.loginfo("    [%0.2f;%0.2f;%0.2f]",
-										res.path.poses[i].position.x,
-										res.path.poses[i].position.y,
-										res.path.poses[i].position.z)
-							breadcrumbWPS.append([res.path.poses[i].position.x, res.path.poses[i].position.y, res.path.poses[i].position.z, 0.0])
 					else:
-						rospy.logerr("solution not found")
-
-					self.publish_breadcrumb(breadcrumbWPS)
-
-					self.send_wp(self.waypoints[self.waypoint_counter])
-					# Increment our waypoint counter
-					self.waypoint_counter += 1
+						if self.breadcrumbWPSnextIndex < (len(self.breadcrumbWPS)):
+							self.send_wp(self.breadcrumbWPS[self.breadcrumbWPSnextIndex])
+							self.breadcrumbWPSnextIndex +=1
+							self.breadcrumbMode = False
+						else:
+							# Increment our waypoint counter when we are done with breadcrumb path
+							self.waypoint_counter += 1
 				else:
 					# Else the mission is over, shutdown and quit the node
 					# XXX:	This could be used to restart the mission back to the
