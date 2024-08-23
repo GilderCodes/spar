@@ -18,6 +18,41 @@ from breadcrumb.srv import RequestPathRequest
 from nav_msgs.msg import Path
 
 
+def publish_waypoints(topic_name, waypoints):
+    """
+    Publishes the given waypoints to the specified topic using the /map frame.
+    
+    :param topic_name: The topic to publish the path on.
+    :param waypoints: List of tuples containing (x, y, z, yaw)
+    """
+    
+    # Create the publisher
+    path_pub = rospy.Publisher(topic_name, Path, queue_size=10, latch=True)
+
+    # Create the Path message
+    path = Path()
+    path.header.frame_id = "/map"
+    path.header.stamp = rospy.Time.now()
+
+    for waypoint in waypoints:
+        pose = PoseStamped()
+
+        pose.pose.position.x = waypoint[0]
+        pose.pose.position.y = waypoint[1]
+        pose.pose.position.z = waypoint[2]
+
+        # Convert yaw to quaternion (simplified for 2D yaw)
+        pose.pose.orientation.w = 1.0  # Assuming yaw is a simple 2D rotation
+        pose.pose.orientation.x = 0.0  # w should be set correctly for actual applications
+        pose.pose.orientation.y = 0.0
+        pose.pose.orientation.z = 0.0
+
+        path.poses.append(pose)
+
+    # Publish the Path message
+    path_pub.publish(path)
+    rospy.loginfo("Published path with %d waypoints on topic %s." % (len(waypoints), topic_name))
+
 
 # This is getting a bit more complicated now, so we'll put our information in
 # a class to keep track of all of our variables. This is not so much different
@@ -171,6 +206,10 @@ class Guidance():
 		dwp = [msg_in.pose.position.x, msg_in.pose.position.y, 0.5, 0.0]
 		# Set the "return waypoint" (at yaw zero)
 		rwp = [start_location.x, start_location.y, start_location.z, 0.0]
+		
+		# Create a list of waypoints for the ROI path
+		roi_waypoints = [dwp, rwp]
+		publish_waypoints('/guidance/ROI', roi_waypoints)
 
 		# XXX: Could pause here for a moment with ( "rospy.sleep(...)" ) to make sure the UAV stops correctly
 
@@ -234,39 +273,7 @@ class Guidance():
 		 # If shutdown is issued, cancel current mission before rospy is shutdown
 		rospy.on_shutdown(lambda : self.spar_client.cancel_goal())
 
-	def publish_breadcrumb(self, waypoints):
-		"""
-		Publishes the given waypoints to the /guidance/path topic using the /map frame.
-		
-		:param waypoints: List of tuples containing (x, y, z, yaw)
-		"""
-		rospy.loginfo("Displaying the current breadcrumb path.")
-		# Create the publisher
-		path_pub = rospy.Publisher('/guidance/breadcrumb', Path, queue_size=10, latch=True)
 
-		# Create the Path message
-		path = Path()
-		path.header.frame_id = "/map"
-		path.header.stamp = rospy.Time.now()
-
-		for waypoint in waypoints:
-			pose = PoseStamped()
-
-			pose.pose.position.x = waypoint[0]
-			pose.pose.position.y = waypoint[1]
-			pose.pose.position.z = waypoint[2]
-
-			# Convert yaw to quaternion (simplified for 2D yaw)
-			pose.pose.orientation.w = 1.0  # Assuming yaw is a simple 2D rotation
-			pose.pose.orientation.x = 0.0  # w should be set correctly for actual applications
-			pose.pose.orientation.y = 0.0
-			pose.pose.orientation.z = 0.0
-
-			path.poses.append(pose)
-
-		# Publish the Path message
-		path_pub.publish(path)
-		rospy.loginfo("Published breadcrumb with %d waypoints." % len(waypoints))
 	# This function will fire whenever we recieve a timer event (te) from rospy.Timer()
 	# The main purpose is to check if a waypoint has been reached,
 	# and if so, send out the next waypoint to continue the mission
@@ -332,7 +339,7 @@ class Guidance():
 						else:
 							rospy.logerr("solution not found")
 	
-						self.publish_breadcrumb(breadcrumbWPS)
+						publish_waypoints('/guidance/breadcrumb', breadcrumbWPS)
 
 					else:
 						rospy.logerr("In bread mode")
@@ -354,40 +361,6 @@ class Guidance():
 				rospy.loginfo("Mission cancelled!")
 				rospy.signal_shutdown("cancelled")
 
-def publish_waypoints(waypoints):
-    """
-    Publishes the given waypoints to the /guidance/path topic using the /map frame.
-    
-    :param waypoints: List of tuples containing (x, y, z, yaw)
-    """
-    
-    # Create the publisher
-    path_pub = rospy.Publisher('/guidance/path', Path, queue_size=10, latch=True)
-
-    # Create the Path message
-    path = Path()
-    path.header.frame_id = "/map"
-    path.header.stamp = rospy.Time.now()
-
-    for waypoint in waypoints:
-        pose = PoseStamped()
-
-        pose.pose.position.x = waypoint[0]
-        pose.pose.position.y = waypoint[1]
-        pose.pose.position.z = waypoint[2]
-
-        # Convert yaw to quaternion (simplified for 2D yaw)
-        pose.pose.orientation.w = 1.0  # Assuming yaw is a simple 2D rotation
-        pose.pose.orientation.x = 0.0  # w should be set correctly for actual applications
-        pose.pose.orientation.y = 0.0
-        pose.pose.orientation.z = 0.0
-
-        path.poses.append(pose)
-
-    # Publish the Path message
-    path_pub.publish(path)
-    rospy.loginfo("Published path with %d waypoints." % len(waypoints))
-
 
 def main(args):
 	# Initialise ROS
@@ -403,7 +376,7 @@ def main(args):
 		   [ 1.0,-1.0, surveyAltitude, 0.0],
 		   [ 0.0, 0.0, surveyAltitude, 0.0]]
 
-	publish_waypoints(wps)
+	publish_waypoints('/guidance/path', wps)
 	rospy.loginfo("Published Path")
 	# Create our guidance class option
 	guide = Guidance(wps)
