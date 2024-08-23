@@ -7,10 +7,6 @@ import tf2_ros
 from std_msgs.msg import Time
 from geometry_msgs.msg import TransformStamped
 
-<<<<<<< HEAD
-
-=======
->>>>>>> breadcrumb
 # Global Variables
 tfbr = None
 pub_found = None
@@ -28,7 +24,6 @@ def send_tf_target():
 	t.header.stamp = time_found
 	t.header.frame_id = camera_name
 	t.child_frame_id = target_name
-<<<<<<< HEAD
 	
     # Code to get the target location relative to the camera here (Solve PnP)
 
@@ -36,12 +31,6 @@ def send_tf_target():
 	t.transform.translation.x = -0.4
 	t.transform.translation.y = 0.2
 	t.transform.translation.z = 0.95
-=======
-
-	t.transform.translation.x = -0.4
-	t.transform.translation.y = 0.2
-	t.transform.translation.z = 1.5
->>>>>>> breadcrumb
 	t.transform.rotation.x = 0.0
 	t.transform.rotation.y = 0.0
 	t.transform.rotation.z = 0.0

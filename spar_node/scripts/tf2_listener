@@ -7,17 +7,12 @@ import tf2_ros
 from std_msgs.msg import Time
 from geometry_msgs.msg import TransformStamped
 
-<<<<<<< HEAD
 # Library to send PostStamped to ROI
 from geometry_msgs.msg import PoseStamped
 
 tfBuffer = None
 tfln = None
 pub_roi = None
-=======
-tfBuffer = None
-tfln = None
->>>>>>> breadcrumb
 
 def callback_target_found(msg_in):
 	# We recieved a "found" timestamp
@@ -29,7 +24,6 @@ def callback_target_found(msg_in):
 
 		# Dump information to screen
 		rospy.loginfo("Found target at the following location in the world:")
-<<<<<<< HEAD
 		# This is the information that we want for the ROI.
 		rospy.loginfo("[x: %0.2f; y: %0.2f; z: %0.2f]" % (t.transform.translation.x,
 														  t.transform.translation.y,
@@ -48,11 +42,6 @@ def callback_target_found(msg_in):
 		pub_roi.publish(pose)
 		rospy.loginfo("ROI coordinates sent.")
 		
-=======
-		rospy.loginfo("[x: %0.2f; y: %0.2f; z: %0.2f]" % (t.transform.translation.x,
-														  t.transform.translation.y,
-														  t.transform.translation.z))
->>>>>>> breadcrumb
 	except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
 		rospy.logwarn(e)
 
@@ -66,12 +55,9 @@ if __name__ == '__main__':
 	# This catches all messages sent using TF2
 	tfBuffer = tf2_ros.Buffer()
 	tfln = tf2_ros.TransformListener(tfBuffer)
-<<<<<<< HEAD
 	
     # Publisher for ROI
 	pub_roi = rospy.Publisher('/target_detection/roi', PoseStamped, queue_size=2)
-=======
->>>>>>> breadcrumb
 
 	rospy.loginfo("tf2_listener running.")
 
