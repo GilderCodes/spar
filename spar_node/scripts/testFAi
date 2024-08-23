@@ -10,6 +10,42 @@ import actionlib
 from actionlib_msgs.msg import GoalStatus
 
 from spar_msgs.msg import FlightMotionAction, FlightMotionGoal
+from nav_msgs.msg import Path
+from geometry_msgs.msg import Point, PoseStamped
+
+def publish_waypoints(waypoints):
+    """
+    Publishes the given waypoints to the /guidance/path topic using the /map frame.
+    
+    :param waypoints: List of tuples containing (x, y, z, yaw)
+    """
+    
+    # Create the publisher
+    path_pub = rospy.Publisher('/guidance/path', Path, queue_size=10, latch=True)
+
+    # Create the Path message
+    path = Path()
+    path.header.frame_id = "/map"
+    path.header.stamp = rospy.Time.now()
+
+    for waypoint in waypoints:
+        pose = PoseStamped()
+
+        pose.pose.position.x = waypoint[0]
+        pose.pose.position.y = waypoint[1]
+        pose.pose.position.z = waypoint[2]
+
+        # Convert yaw to quaternion (simplified for 2D yaw)
+        pose.pose.orientation.w = 1.0  # Assuming yaw is a simple 2D rotation
+        pose.pose.orientation.x = 0.0  # w should be set correctly for actual applications
+        pose.pose.orientation.y = 0.0
+        pose.pose.orientation.z = 0.0
+
+        path.poses.append(pose)
+
+    # Publish the Path message
+    path_pub.publish(path)
+    rospy.loginfo("Published path with %d waypoints." % len(waypoints))
 
 def send_wp(spar_client, x, y, z, yaw):
 	speed = rospy.get_param("~speed", 1.0)
@@ -66,6 +102,7 @@ def send_wps(spar_client):
 		   [0.0, 0.0, 0.0, 0.0],
 		   ]
 
+	publish_waypoints(wps)
 	# Loop through each waypoint in our list
 	i = 0
 	for wp in wps:

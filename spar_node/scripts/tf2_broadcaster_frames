@@ -11,7 +11,11 @@ from geometry_msgs.msg import PoseStamped, TransformStamped
 tfbr = None
 tfsbr = None
 
+<<<<<<< HEAD
 uav_name = "emulated_uav"
+=======
+uav_name = "drone6"
+>>>>>>> breadcrumb
 camera_name = "camera"
 
 def send_tf_camera():
@@ -22,7 +26,10 @@ def send_tf_camera():
 	t.header.frame_id = uav_name
 	t.child_frame_id = camera_name
 
+<<<<<<< HEAD
     # Camera Position from Optitrack (m)
+=======
+>>>>>>> breadcrumb
 	t.transform.translation.x = 0.0
 	t.transform.translation.y = 0.0
 	t.transform.translation.z = -0.05
