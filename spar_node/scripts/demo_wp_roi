@@ -204,7 +204,6 @@ class Guidance():
 		# to allow the waypoint timer to take back over
 		self.performing_roi = False
 
-
 	# This function is for convinience to simply send out a new waypoint
 	def send_wp(self, wp):
 		# Make sure the waypoint is valid before continuing
