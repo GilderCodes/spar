@@ -7,10 +7,6 @@ import tf2_ros
 from std_msgs.msg import Time
 from geometry_msgs.msg import TransformStamped
 
-<<<<<<< HEAD
-
-=======
->>>>>>> roi_branch
 # Global Variables
 tfbr = None
 pub_found = None
