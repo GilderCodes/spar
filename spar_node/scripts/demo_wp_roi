@@ -168,14 +168,15 @@ class Guidance():
 		#		the pose to maintain that throughout a diversion
 
 		# Set the "diversion waypoint" (at yaw zero)
-		dwp = [msg_in.pose.position.x, msg_in.pose.position.y, msg_in.pose.position.z, 0.0]
+		dwp = [msg_in.pose.position.x, msg_in.pose.position.y, 0.5, 0.0]
 		# Set the "return waypoint" (at yaw zero)
-		rwp = [self.current_location.x, self.current_location.y, self.current_location.z, 0.0]
+		rwp = [start_location.x, start_location.y, start_location.z, 0.0]
 
 		# XXX: Could pause here for a moment with ( "rospy.sleep(...)" ) to make sure the UAV stops correctly
 
 		self.send_wp(dwp)
 		self.spar_client.wait_for_result()
+
 		if self.spar_client.get_state() != GoalStatus.SUCCEEDED:
 			# Something went wrong, cancel out of guidance!
 			rospy.signal_shutdown("cancelled")
@@ -196,12 +197,12 @@ class Guidance():
 
 		# "waypoint_counter" represents the "next waypoint"
 		# "waypoint_counter - 1" represents the "current waypoint"
-		rospy.loginfo("Resuming flight plan from waypoint %i!" % (self.waypoint_counter - 1))
-		self.send_wp(self.waypoints[self.waypoint_counter - 1])
+		rospy.loginfo("Resuming flight plan from waypoint original waypoint!")
+		# self.send_wp(self.waypoints[self.waypoint_counter - 1])
+		self.send_wp(self.breadcrumbWPS[self.breadcrumbWPSnextIndex-1])
 		# Unset our flag that we are performing a diversion
 		# to allow the waypoint timer to take back over
 		self.performing_roi = False
-
 
 	# This function is for convinience to simply send out a new waypoint
 	def send_wp(self, wp):
@@ -339,9 +340,10 @@ class Guidance():
 							self.send_wp(self.breadcrumbWPS[self.breadcrumbWPSnextIndex])
 							self.breadcrumbWPSnextIndex +=1
 						else:
-							self.breadcrumbMode = False
 							# Increment our waypoint counter when we are done with breadcrumb path
 							self.waypoint_counter += 1
+							rospy.logerr("Breadcrumb off")
+							self.breadcrumbMode = False
 				else:
 					# Else the mission is over, shutdown and quit the node
 					# XXX:	This could be used to restart the mission back to the

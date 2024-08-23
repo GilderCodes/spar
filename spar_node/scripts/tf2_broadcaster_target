@@ -7,7 +7,10 @@ import tf2_ros
 from std_msgs.msg import Time
 from geometry_msgs.msg import TransformStamped
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> roi_branch
 # Global Variables
 tfbr = None
 pub_found = None
@@ -31,7 +34,7 @@ def send_tf_target():
     # Target Displacement Relative to the Camera Frame (m):
 	t.transform.translation.x = -0.4
 	t.transform.translation.y = 0.2
-	t.transform.translation.z = 1.5
+	t.transform.translation.z = 0.95
 	t.transform.rotation.x = 0.0
 	t.transform.rotation.y = 0.0
 	t.transform.rotation.z = 0.0
