@@ -168,6 +168,11 @@ class Guidance():
 			rospy.logwarn("Waypoint has an invalid length (must be X/Y/Z/Yaw)")
 			return False
 
+		# Check if the waypoint is inside the net
+		if abs(wp[0]) > self.safeRangeX or abs(wp[1]) > self.safeRangeY or wp[2] > self.safeRangeZ:
+			rospy.logwarn("Waypoint has an invalid size for O134 (must be -{}<X<{}/-{}<Y<{}/Z<{}/Yaw)", format(self.safeRangeX, self.safeRangeY, self.safeRangeZ))
+			return False
+		
 		# If we haven't returned false yet, then waypoint looks valid!
 		return True
 
