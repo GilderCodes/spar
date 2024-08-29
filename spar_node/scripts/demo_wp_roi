@@ -86,6 +86,7 @@ class Guidance():
 			self.breadcrumbWPSnextIndex = 0
 			self.breadcrumbMode = False
 			self.breadcrumbWPS = []
+			self.arucoMarkers = []
 
 			# Setup a timer to check if our waypoint has completed at 20Hz
 			rospy.loginfo("Setting callbacks")
@@ -96,6 +97,8 @@ class Guidance():
 			self.sub_pose = rospy.Subscriber("~pose", PoseStamped, self.callback_pose)
 			# Subscriber to catch "ROI" diversion commands
 			self.sub_roi = rospy.Subscriber("~roi", PoseStamped, self.callback_inspect_roi)
+			# Subscriber to store Aruco Markers
+			self.sub_aruco = rospy.Subscriber("~aruco_store", PoseStamped, self.callback_store_aruco)
 
 			# XXX: Could have a publisher to output our waypoint progress
 			# throughout the flight (should publish each time the waypoint
@@ -168,6 +171,8 @@ class Guidance():
 		# rospy.loginfo("Updating Pose UAV...")
 		self.current_location = msg_in.pose.position
 
+	def callback_store_aruco(self, msg_in):
+		self.arucoMarkers.append(msg_in)
 
 	# This function will fire whenever a ROI pose message is sent
 	# It is also responsible for handling the ROI "inspection task"
@@ -369,26 +374,25 @@ def main(args):
 	# List of waypoints
 	# surveyAltitude = 2.5
 	# [X, Y, Z, Yaw]
-	wpsR1 = [[ 0.0, 0.0, surveyAltitude, 0.0],
-		   [ 1.0, 1.0, surveyAltitude, 0.0],
-		   [-1.0, 1.0, surveyAltitude, 0.0],
-		   [-1.0,-1.0, surveyAltitude, 0.0],
-		   [ 1.0,-1.0, surveyAltitude, 0.0],
-		   [ 0.0, 0.0, surveyAltitude, 0.0]]
-
-	wpsR2 = [[ 0.0, 0.0, surveyAltitude*2, 0.0],
-		   [ 1.0, 1.0, surveyAltitude*2, 0.0],
-		   [-1.0, 1.0, surveyAltitude*2, 0.0],
-		   [-1.0,-1.0, surveyAltitude*2, 0.0],
-		   [ 1.3,-1.0, surveyAltitude*2, 0.0],
-		   [ 1.3,1.0, surveyAltitude*2, 0.0],
-		   [ 1.0,-1.0, surveyAltitude*2, 0.0],
-		   [ 0.0, 0.0, surveyAltitude*2, 0.0]]
-
-	if surveyAltitude > 2:
-		wps = wpsR1
-	else:
-		wps = wpsR2
+	wps = [[ 0.0, 0.0, 1.0, 0.0],
+           [ 3.5, 2.0, 1.0, 0.0],
+           [ 3.5, -2.0, 1.0, 0.0],
+           [ 2.5, -2.0, 1.0, 0.0],
+           [ 2.5, 2.0, 1.0, 0.0],
+           [ 1.5, 2.0, 1.0, 0.0],
+           [ 1.5, -2.0, 1.0, 0.0],
+           [ 0.5, -2.0, 1.0, 0.0],
+           [ 0.5, 2.0, 1.0, 0.0],
+           [ -0.5, 2.0, 1.0, 0.0],
+           [ -0.5, -2.0, 1.0, 0.0],
+           [-1.5, -2.0, 1.0, 0.0],
+           [-1.5, 2.0, 1.0, 0.0],
+           [-2.5, 2.0, 1.0, 0.0],
+           [-2.5, -2.0, 1.0, 0.0],
+           [-3.5, -2.0, 1.0, 0.0],
+           [-3.5, 2.0, 1.0, 0.0],
+           [0.0, 0.0, 1.0, 0.0],
+           [0.0, 0.0, 0.0, 0.0]]
 
 	# Create our guidance class option
 	guide = Guidance(wps)
