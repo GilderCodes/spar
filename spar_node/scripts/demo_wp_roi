@@ -189,6 +189,13 @@ class Guidance():
 		# Set the "return waypoint" (at yaw zero)
 		rwp = [self.current_location.x, self.current_location.y, self.current_location.z, 0.0]
 
+
+		# Publish the diversion path
+		roiWPS = []
+		roiWPS.append(rwp)
+		roiWPS.append(dwp)
+		self.display_path(roiWPS,"/guidance/diversionROI")
+
 		# XXX: Could pause here for a moment with ( "rospy.sleep(...)" ) to make sure the UAV stops correctly
 
 		self.send_wp(dwp)
@@ -213,8 +220,9 @@ class Guidance():
 
 		# "nextWaypointIndex" represents the "next waypoint"
 		# "nextWaypointIndex - 1" represents the "current waypoint"
-		rospy.loginfo("Resuming flight plan from waypoint %i!" % (self.nextWaypointIndex - 1))
-		self.send_wp(self.waypoints[self.nextWaypointIndex - 1])
+		rospy.loginfo("Resuming flight plan from waypoint %i!" % (self.nextWaypointIndex))
+		self.send_wp(self.waypoints[self.nextWaypointIndex])
+		# MADE A CHANGE HERE TO REMOVE THE -1 TO CONTINUE TO NEXT POINT RATHER THAN RETURNING FOR BREADCRUMB MODE
 		# Unset our flag that we are performing a diversion
 		# to allow the waypoint timer to take back over
 		self.performing_roi = False
@@ -309,7 +317,7 @@ class Guidance():
 							# Display the path
 							# print(breadcrumbWPS)
 							self.breadcrumbWPS = breadcrumbWPS
-							self.display_path(breadcrumbWPS,"/guidance/pathBreadcrum")
+							self.display_path(breadcrumbWPS,"/guidance/pathBreadcrumb")
 							self.breadcrumbMode = True
 							self.breadcrumbWPSnextIndex = 0
 							self.send_wp(self.breadcrumbWPS[self.breadcrumbWPSnextIndex])
