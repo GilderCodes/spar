@@ -16,6 +16,7 @@ from spar_msgs.msg import FlightMotionAction, FlightMotionGoal
 # Libraries for interfacing with BreadCrumb
 from breadcrumb.srv import RequestPath
 from breadcrumb.srv import RequestPathRequest
+import subprocess
 
 
 # This is getting a bit more complicated now, so we'll put our information in
@@ -55,10 +56,10 @@ class Guidance():
 		self.vel_linear = rospy.get_param("~vel_linear", 0.2)
 		self.vel_yaw = rospy.get_param("~vel_yaw", 0.2)
 		# Set our position and yaw waypoint accuracies
-		self.accuracy_pos = rospy.get_param("~acc_pos", 0.1)
-		self.accuracy_yaw = rospy.get_param("~acc_yaw", 0.1)
+		self.accuracy_pos = rospy.get_param("~acc_pos", 0.3)
+		self.accuracy_yaw = rospy.get_param("~acc_yaw", 2.0)
 		# Get survey altitude
-		self.surveyAltitude = rospy.get_param("~surveyAlt", 1)
+		self.surveyAltitude = rospy.get_param("~surveyAlt", 1.5)
 
 		# Create our action client
 		action_ns = rospy.get_param("~action_topic", 'spar/flight')
@@ -71,6 +72,7 @@ class Guidance():
 		# that does not exist
 		rospy.wait_for_service('/breadcrumb/request_path')
 		self.srvc_bc = rospy.ServiceProxy('/breadcrumb/request_path', RequestPath)
+		rospy.loginfo("Breadcrumb Loaded")
 
 		if not rospy.is_shutdown():
 			# Good to go, start mission
@@ -164,6 +166,7 @@ class Guidance():
 
 	# This function will check receive the current pose of the UAV constantly
 	def callback_pose(self, msg_in):
+		rospy.loginfo("Got pose")
 		# Store the current position at all times so it can be accessed later
 		# rospy.loginfo("Updating Pose UAV...")
 		self.current_location = msg_in.pose.position
@@ -207,6 +210,7 @@ class Guidance():
 
 		rospy.loginfo("Reached diversion ROI!")
 		# XXX: Do something?
+		subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_drone.launch'])
 		rospy.sleep(rospy.Duration(10))
 
 		rospy.loginfo("Returning to flight plan...")
@@ -242,7 +246,7 @@ class Guidance():
 		goal.position.x = wp[0]
 		goal.position.y = wp[1]
 		goal.position.z = wp[2]
-		goal.yaw = wp[3]
+		#goal.yaw = wp[3]
 		goal.velocity_vertical = self.vel_linear
 		goal.velocity_horizontal = self.vel_linear
 		goal.yawrate = self.vel_yaw
@@ -265,7 +269,9 @@ class Guidance():
 	def check_waypoint_status(self, te):
 		# If we're performing the ROI diversion, then don't do
 		# anything here, as this is handled in that function
+		#rospy.loginfo("Checking WP Progress")
 		if not self.performing_roi:
+			#rospy.loginfo("NOT ROI")
 			# If the last segment has succeeded.
 			# For more complex tasks, it might be necessary to also
 			# check if you are in waypoint or breadcrum mode.
@@ -327,6 +333,7 @@ class Guidance():
 							rospy.logerr("solution not found")
 
 					else:
+						rospy.loginfo("Executing Bread Path")
 						if self.breadcrumbWPSnextIndex < (len(self.breadcrumbWPS)):
 							# We got here a breadcrumb path, we should exuted down here:
 							self.send_wp(self.breadcrumbWPS[self.breadcrumbWPSnextIndex])
@@ -373,7 +380,7 @@ class Guidance():
 def main(args):
 	# Initialise ROS
 	rospy.init_node('guidance')
-	surveyAltitude = rospy.get_param("~surveyAlt", 1)
+	surveyAltitude = 1.5#rospy.get_param("~surveyAlt", 1.5)
 	# List of waypoints
 	# surveyAltitude = 2.5
 	# [X, Y, Z, Yaw]

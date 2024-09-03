@@ -176,6 +176,7 @@ catkin_install_python(PROGRAMS
   scripts/tf2_broadcaster_frames
   scripts/tf2_broadcaster_target
   scripts/tf2_listener
+  scripts/spar_client_monitor.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
