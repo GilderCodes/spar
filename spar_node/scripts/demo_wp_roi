@@ -4,10 +4,12 @@ import sys
 from math import *
 
 import rospy
+import tf2_ros
 import actionlib
+
 from actionlib_msgs.msg import GoalStatus
 
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, TransformStamped
 
 from nav_msgs.msg import Path
 
@@ -349,10 +351,22 @@ class Guidance():
 							# If we finish with the breadcrumb waypoints we increase normal waypoints
 							self.nextWaypointIndex += 1
 							self.breadcrumbMode = False
-				else:
+				elif self.nextWaypointIndex == (len(self.waypoints)):
 					# Else the mission is over, shutdown and quit the node
 					# XXX:	This could be used to restart the mission back to the
 					#		first waypoint instead to restart the mission
+					ArUcoID = 1
+					transform_data = self.get_aruco_transform(ArUcoID)
+					if transform_data is not None:
+						ArUcoX = transform_data['x']
+						ArUcoY = transform_data['y']
+						ArUcoZ = transform_data['z']
+
+						ArUcoWP = [ArUcoX, ArUcoY, self.surveyAltitude, 0.0]
+						self.send_wp(ArUcoWP)
+
+					self.nextWaypointIndex += 1
+				else:
 					rospy.loginfo("Mission complete!")
 					rospy.signal_shutdown("Complete, Wooh!")
 			elif (self.spar_client.get_state() == GoalStatus.PREEMPTED) or (self.spar_client.get_state() == GoalStatus.ABORTED) or (self.spar_client.get_state() == GoalStatus.REJECTED):
@@ -382,6 +396,40 @@ class Guidance():
 		rospy.loginfo("Publishing path...")
 		pub_path.publish(msg)
 
+	def get_aruco_transform(self, aruco_id):
+		# Create a tf2 buffer and listener
+		tf_buffer = tf2_ros.Buffer()
+		listener = tf2_ros.TransformListener(tf_buffer)
+
+		# Allow some time for the listener to fill with transforms
+		rospy.sleep(2)  # Adjust this if needed to allow buffering time
+
+		try:
+			# Lookup the transform from "map" to the specific ArUco frame
+			aruco_frame = f"ArUco_{aruco_id}"
+			transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
+
+			# Extract the translation (position) and rotation (orientation)
+			translation = transform.transform.translation
+			rotation = transform.transform.rotation
+
+			# Log the retrieved information
+			rospy.loginfo(f"ArUco_{aruco_id} Transform: Translation (x: {translation.x}, y: {translation.y}, z: {translation.z}), "
+						f"Rotation (qx: {rotation.x}, qy: {rotation.y}, qz: {rotation.z}, qw: {rotation.w})")
+
+			return {
+				'x': translation.x,
+				'y': translation.y,
+				'z': translation.z,
+				'qx': rotation.x,
+				'qy': rotation.y,
+				'qz': rotation.z,
+				'qw': rotation.w
+			}
+
+		except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+			rospy.logerr(f"Error looking up transform for ArUco_{aruco_id}: {e}")
+			return None
 
 def main(args):
 	# Initialise ROS
@@ -392,23 +440,23 @@ def main(args):
 	# [X, Y, Z, Yaw]
 	wps = [[ 0.0, 0.0, surveyAltitude, 0.0],
 		   [ 3.5, 2.0, surveyAltitude, 0.0],
-		   [ 3.5, -2.0, surveyAltitude, 0.0],
-		   [ 2.5, -2.0, surveyAltitude, 0.0],
-		   [ 2.5, 2.0, surveyAltitude, 0.0],
-		   [ 1.5, 2.0, surveyAltitude, 0.0],
-		   [ 1.5, -2.0, surveyAltitude, 0.0],
-		   [ 0.5, -2.0, surveyAltitude, 0.0],
-		   [ 0.5, 2.0, surveyAltitude, 0.0],
-		   [ -0.5, 2.0, surveyAltitude, 0.0],
-		   [ -0.5, -2.0, surveyAltitude, 0.0],
-		   [-1.5, -2.0, surveyAltitude, 0.0],
-		   [-1.5, 2.0, surveyAltitude, 0.0],
-		   [-2.5, 2.0, surveyAltitude, 0.0],
-		   [-2.5, -2.0, surveyAltitude, 0.0],
-		   [-3.5, -2.0, surveyAltitude, 0.0],
-		   [-3.5, 2.0, surveyAltitude, 0.0],
-		   [0.0, 0.0, surveyAltitude, 0.0],
-		   [0.0, 0.0, surveyAltitude, 0.0],
+		#    [ 3.5, -2.0, surveyAltitude, 0.0],
+		#    [ 2.5, -2.0, surveyAltitude, 0.0],
+		#    [ 2.5, 2.0, surveyAltitude, 0.0],
+		#    [ 1.5, 2.0, surveyAltitude, 0.0],
+		#    [ 1.5, -2.0, surveyAltitude, 0.0],
+		#    [ 0.5, -2.0, surveyAltitude, 0.0],
+		#    [ 0.5, 2.0, surveyAltitude, 0.0],
+		#    [ -0.5, 2.0, surveyAltitude, 0.0],
+		#    [ -0.5, -2.0, surveyAltitude, 0.0],
+		#    [-1.5, -2.0, surveyAltitude, 0.0],
+		#    [-1.5, 2.0, surveyAltitude, 0.0],
+		#    [-2.5, 2.0, surveyAltitude, 0.0],
+		#    [-2.5, -2.0, surveyAltitude, 0.0],
+		#    [-3.5, -2.0, surveyAltitude, 0.0],
+		#    [-3.5, 2.0, surveyAltitude, 0.0],
+		#    [0.0, 0.0, surveyAltitude, 0.0],
+		#    [0.0, 0.0, surveyAltitude, 0.0],
 		   ]
 
 	# Create our guidance class option
