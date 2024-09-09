@@ -15,6 +15,7 @@ from nav_msgs.msg import Path
 
 from spar_msgs.msg import FlightMotionAction, FlightMotionGoal
 
+from std_msgs.msg import Float32MultiArray, String
 # Libraries for interfacing with BreadCrumb
 from breadcrumb.srv import RequestPath
 from breadcrumb.srv import RequestPathRequest
@@ -270,6 +271,24 @@ class Guidance():
 		 # If shutdown is issued, cancel current mission before rospy is shutdown
 		rospy.on_shutdown(lambda : self.spar_client.cancel_goal())
 
+	def land(self):
+		# Build the flight goal
+		goal = FlightMotionGoal()
+		goal.motion = FlightMotionGoal.MOTION_LAND
+		goal.velocity_vertical = self.vel_linear
+		goal.velocity_horizontal = self.vel_linear
+		goal.yawrate = self.vel_yaw
+		goal.wait_for_convergence = True
+		goal.position_radius = self.accuracy_pos
+		goal.yaw_range = self.accuracy_yaw
+
+		# For this function, we don't wait in the loop.
+		# Instead we just send the waypoint and check up on it later
+		# This checking is either with the "self.timer" for waypoints
+		# or with direct calls during the ROI diversion
+		self.spar_client.send_goal(goal)
+		# If shutdown is issued, cancel current mission before rospy is shutdown
+		rospy.on_shutdown(lambda : self.spar_client.cancel_goal())
 
 	# This function will fire whenever we recieve a timer event (te) from rospy.Timer()
 	# The main purpose is to check if a waypoint has been reached,
@@ -355,18 +374,26 @@ class Guidance():
 					# Else the mission is over, shutdown and quit the node
 					# XXX:	This could be used to restart the mission back to the
 					#		first waypoint instead to restart the mission
-					ArUcoID = 1
-					transform_data = self.get_aruco_transform(ArUcoID)
-					if transform_data is not None:
-						ArUcoX = transform_data['x']
-						ArUcoY = transform_data['y']
-						ArUcoZ = transform_data['z']
+					
+					aruco_transforms = self.get_existing_aruco_transforms()
+					if aruco_transforms:
+						# Get the first ArUco marker (the key-value pair) in the dictionary
+						first_aruco_id, first_aruco_transform = next(iter(aruco_transforms.items()))
 
-						ArUcoWP = [ArUcoX, ArUcoY, self.surveyAltitude, 0.0]
-						self.send_wp(ArUcoWP)
-
+						# Extract the x, y, z coordinates
+						# x = first_aruco_transform['x']
+						# y = first_aruco_transform['y']
+						# z = first_aruco_transform['z']
+						arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], self.surveyAltitude, 0]
+						# Print or use the coordinates
+						rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
+						self.send_wp(arucoWP)
+					else:
+						rospy.loginfo("No ArUco markers found.")
 					self.nextWaypointIndex += 1
 				else:
+					self.land()
+					rospy.sleep(rospy.Duration(10))
 					rospy.loginfo("Mission complete!")
 					rospy.signal_shutdown("Complete, Wooh!")
 			elif (self.spar_client.get_state() == GoalStatus.PREEMPTED) or (self.spar_client.get_state() == GoalStatus.ABORTED) or (self.spar_client.get_state() == GoalStatus.REJECTED):
@@ -396,7 +423,7 @@ class Guidance():
 		rospy.loginfo("Publishing path...")
 		pub_path.publish(msg)
 
-	def get_aruco_transform(self, aruco_id):
+	def get_existing_aruco_transforms(self):
 		# Create a tf2 buffer and listener
 		tf_buffer = tf2_ros.Buffer()
 		listener = tf2_ros.TransformListener(tf_buffer)
@@ -404,32 +431,54 @@ class Guidance():
 		# Allow some time for the listener to fill with transforms
 		rospy.sleep(2)  # Adjust this if needed to allow buffering time
 
+		marker_transforms = {}
+
 		try:
-			# Lookup the transform from "map" to the specific ArUco frame
-			aruco_frame = f"ArUco_{aruco_id}"
-			transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
+			# Get all available transforms from the buffer
+			frames = tf_buffer.all_frames_as_string()
+			rospy.loginfo(frames)
 
-			# Extract the translation (position) and rotation (orientation)
-			translation = transform.transform.translation
-			rotation = transform.transform.rotation
+			# Extract just the frame names from the detailed string output
+			lines = frames.splitlines()
+			aruco_frames = []
 
-			# Log the retrieved information
-			rospy.loginfo(f"ArUco_{aruco_id} Transform: Translation (x: {translation.x}, y: {translation.y}, z: {translation.z}), "
-						f"Rotation (qx: {rotation.x}, qy: {rotation.y}, qz: {rotation.z}, qw: {rotation.w})")
+			for line in lines:
+				if "ArUco_" in line:
+					# Extract the frame name by splitting the line
+					frame = line.split()[1]  # "Frame ArUco_54" -> "ArUco_54"
+					aruco_frames.append(frame)
 
-			return {
-				'x': translation.x,
-				'y': translation.y,
-				'z': translation.z,
-				'qx': rotation.x,
-				'qy': rotation.y,
-				'qz': rotation.z,
-				'qw': rotation.w
-			}
+			rospy.loginfo(aruco_frames)
+
+			for aruco_frame in aruco_frames:
+				aruco_id = aruco_frame.split('_')[1]  # Extract the ArUco ID
+
+				# Lookup the transform from "map" to the ArUco frame
+				transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
+
+				# Extract the translation (position) and rotation (orientation)
+				translation = transform.transform.translation
+				rotation = transform.transform.rotation
+
+				# Log the retrieved information
+				rospy.loginfo(f"{aruco_frame} Transform: Translation (x: {translation.x}, y: {translation.y}")
+
+				marker_transforms[aruco_id] = {
+					'x': translation.x,
+					'y': translation.y,
+					'z': translation.z,
+					'qx': rotation.x,
+					'qy': rotation.y,
+					'qz': rotation.z,
+					'qw': rotation.w
+				}
 
 		except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-			rospy.logerr(f"Error looking up transform for ArUco_{aruco_id}: {e}")
-			return None
+			rospy.logwarn(f"Error retrieving transforms: {e}")
+
+		return marker_transforms
+
+
 
 def main(args):
 	# Initialise ROS
@@ -440,23 +489,23 @@ def main(args):
 	# [X, Y, Z, Yaw]
 	wps = [[ 0.0, 0.0, surveyAltitude, 0.0],
 		   [ 3.5, 2.0, surveyAltitude, 0.0],
-		#    [ 3.5, -2.0, surveyAltitude, 0.0],
-		#    [ 2.5, -2.0, surveyAltitude, 0.0],
-		#    [ 2.5, 2.0, surveyAltitude, 0.0],
-		#    [ 1.5, 2.0, surveyAltitude, 0.0],
-		#    [ 1.5, -2.0, surveyAltitude, 0.0],
-		#    [ 0.5, -2.0, surveyAltitude, 0.0],
-		#    [ 0.5, 2.0, surveyAltitude, 0.0],
-		#    [ -0.5, 2.0, surveyAltitude, 0.0],
-		#    [ -0.5, -2.0, surveyAltitude, 0.0],
-		#    [-1.5, -2.0, surveyAltitude, 0.0],
-		#    [-1.5, 2.0, surveyAltitude, 0.0],
-		#    [-2.5, 2.0, surveyAltitude, 0.0],
-		#    [-2.5, -2.0, surveyAltitude, 0.0],
-		#    [-3.5, -2.0, surveyAltitude, 0.0],
-		#    [-3.5, 2.0, surveyAltitude, 0.0],
-		#    [0.0, 0.0, surveyAltitude, 0.0],
-		#    [0.0, 0.0, surveyAltitude, 0.0],
+		   [ 3.5, -2.0, surveyAltitude, 0.0],
+		   [ 2.5, -2.0, surveyAltitude, 0.0],
+		   [ 2.5, 2.0, surveyAltitude, 0.0],
+		   [ 1.5, 2.0, surveyAltitude, 0.0],
+		   [ 1.5, -2.0, surveyAltitude, 0.0],
+		   [ 0.5, -2.0, surveyAltitude, 0.0],
+		   [ 0.5, 2.0, surveyAltitude, 0.0],
+		   [ -0.5, 2.0, surveyAltitude, 0.0],
+		   [ -0.5, -2.0, surveyAltitude, 0.0],
+		   [-1.5, -2.0, surveyAltitude, 0.0],
+		   [-1.5, 2.0, surveyAltitude, 0.0],
+		   [-2.5, 2.0, surveyAltitude, 0.0],
+		   [-2.5, -2.0, surveyAltitude, 0.0],
+		   [-3.5, -2.0, surveyAltitude, 0.0],
+		   [-3.5, 2.0, surveyAltitude, 0.0],
+		   [0.0, 0.0, surveyAltitude, 0.0],
+		   [0.0, 0.0, surveyAltitude, 0.0],
 		   ]
 
 	# Create our guidance class option
