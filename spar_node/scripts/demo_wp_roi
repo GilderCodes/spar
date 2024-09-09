@@ -71,6 +71,12 @@ class Guidance():
 		rospy.loginfo("Waiting for spar...")
 		self.spar_client.wait_for_server()
 
+
+		# Set up the publisher/subscriber and global for the payload
+		self.pay_item = "None"
+		self.pay_pub = rospy.Publisher('/payload_deployment', String, queue_size=10)
+		self.pay_sub = rospy.Subscriber('/roi_detection', Float32MultiArray, self.roi_callback)
+
 		# Wait to connect with Breadcrumb (Warning, you code might get stuck in here if breadcrumb is not running)
 		# Code will error if you try to connect to a service
 		# that does not exist
@@ -134,7 +140,23 @@ class Guidance():
 
 		# If we haven't returned false yet, then waypoints look good!
 		return True
+	
+	def roi_callback(self, data):
+		# The first element in the data array is the ROI ID or number
+		roi_id = int(data.data[0]*10)
 
+		if roi_id == 1:
+			self.pay_item = "Backpack"
+		elif roi_id == 2:
+			self.pay_item = "Human"
+		elif roi_id == 3:
+			self.pay_item = "Drone"
+		elif roi_id == 4:
+			self.pay_item = "Phone"
+		else:
+			self.pay_item = "Unknown"
+			
+		rospy.loginfo(f"New ROI ID detected: {self.pay_item}")
 
 	# This function will check if a waypoint is in the format we expect
 	def check_waypoint(self, wp):
@@ -214,12 +236,20 @@ class Guidance():
 
 		rospy.loginfo("Reached diversion ROI!")
 		# XXX: Do something?
-		# if self.paymode == 0:
-		# 	subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_drone.launch'])
-		# 	self.paymode = 1
-		# elif self.paymode == 1:
-		# 	subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_phone.launch'])
-
+		msg = String()
+		if self.pay_item == "Backpack":
+			msg.data = "drop_gps"
+		elif self.pay_item == "Human":
+			msg.data = "drop_epipen"
+		elif self.pay_item == "Drone":
+			msg.data = "drop_drone"
+		elif self.pay_item == "Phone":
+			msg.data = "drop_phone"
+		else:
+			msg.data = "Unknown"
+        # Publish the message
+		rospy.loginfo(f"Publishing message: {msg.data}")
+		self.pay_pub.publish(msg)
 		rospy.sleep(rospy.Duration(10))
 
 		rospy.loginfo("Returning to flight plan...")
