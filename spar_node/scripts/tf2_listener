@@ -20,7 +20,7 @@ def callback_target_found(msg_in):
 	try:
 		# Lookup transform from "map" to "target" at time "msg_in.data",
 		# and allow for 0.5 seconds to collected any additionally needed data
-		t = tfBuffer.lookup_transform("map", "target", msg_in.data, rospy.Duration(0.5))
+		t = tfBuffer.lookup_transform("map", "target", rospy.Time(0), rospy.Duration(0.5))
 
 		# Dump information to screen
 		rospy.loginfo("Found target at the following location in the world:")
@@ -32,7 +32,8 @@ def callback_target_found(msg_in):
 		pose = PoseStamped()
 		pose.pose.position.x = t.transform.translation.x
 		pose.pose.position.y = t.transform.translation.y
-		pose.pose.position.z = t.transform.translation.z
+		pose.pose.position.z = 0.0#t.transform.translation.z
+		# Changed to zero so it is never out of the area if there is a bad transform
 		
 		pose.pose.orientation.w = 1.0
 		pose.pose.orientation.x = 0.0

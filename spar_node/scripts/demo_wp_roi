@@ -170,7 +170,7 @@ class Guidance():
 
 	# This function will check receive the current pose of the UAV constantly
 	def callback_pose(self, msg_in):
-		rospy.loginfo("Got pose")
+		#rospy.loginfo("Got pose")
 		# Store the current position at all times so it can be accessed later
 		# rospy.loginfo("Updating Pose UAV...")
 		self.current_location = msg_in.pose.position
@@ -194,8 +194,8 @@ class Guidance():
 		# dwp = [msg_in.pose.position.x, msg_in.pose.position.y, msg_in.pose.position.z, 0.0]
 		dwp = [msg_in.pose.position.x, msg_in.pose.position.y, 0.5, 0.0]
 		# Set the "return waypoint" (at yaw zero)
-		rwp = [self.current_location.x, self.current_location.y, self.current_location.z, 0.0]
-
+		rwp = [start_location.x, start_location.y, start_location.z, 0.0]
+		rospy.loginfo(f"RWP: {rwp}")
 
 		# Publish the diversion path
 		roiWPS = []
@@ -214,16 +214,16 @@ class Guidance():
 
 		rospy.loginfo("Reached diversion ROI!")
 		# XXX: Do something?
-		if self.paymode == 0:
-			subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_drone.launch'])
-			self.paymode = 1
-		elif self.paymode == 1:
-			subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_phone.launch'])
+		# if self.paymode == 0:
+		# 	subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_drone.launch'])
+		# 	self.paymode = 1
+		# elif self.paymode == 1:
+		# 	subprocess.Popen(['roslaunch', 'egh450_payload', 'drop_phone.launch'])
 
 		rospy.sleep(rospy.Duration(10))
 
 		rospy.loginfo("Returning to flight plan...")
-
+		rospy.loginfo(f"RWP: {rwp}")
 		self.send_wp(rwp)
 		self.spar_client.wait_for_result()
 		if self.spar_client.get_state() != GoalStatus.SUCCEEDED:
