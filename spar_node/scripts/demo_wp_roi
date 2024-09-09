@@ -381,9 +381,6 @@ class Guidance():
 						first_aruco_id, first_aruco_transform = next(iter(aruco_transforms.items()))
 
 						# Extract the x, y, z coordinates
-						# x = first_aruco_transform['x']
-						# y = first_aruco_transform['y']
-						# z = first_aruco_transform['z']
 						arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], self.surveyAltitude, 0]
 						# Print or use the coordinates
 						rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
@@ -485,8 +482,6 @@ def main(args):
 	rospy.init_node('guidance')
 	surveyAltitude = rospy.get_param("~surveyAlt", 2)
 	# List of waypoints
-	# surveyAltitude = 2.5
-	# [X, Y, Z, Yaw]
 	wps = [[ 0.0, 0.0, surveyAltitude, 0.0],
 		   [ 3.5, 2.0, surveyAltitude, 0.0],
 		   [ 3.5, -2.0, surveyAltitude, 0.0],
