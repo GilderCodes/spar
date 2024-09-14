@@ -3,6 +3,7 @@
 import rospy
 from std_msgs.msg import String
 
+# publisher node
 class BatteryWarningHandler:
     def __init__(self):
         rospy.init_node('battery_warning_handler', anonymous=True)
