@@ -79,13 +79,10 @@ class Guidance():
 		self.pay_pub = rospy.Publisher('/payload_deployment', String, queue_size=10)
 		self.pay_sub = rospy.Subscriber('/roi_detection', Float32MultiArray, self.roi_callback)
 
-<<<<<<< HEAD
 		# Speaker Options
 		self.speak = rospy.Publisher('/speak', String, queue_size=10)
-=======
 		# Set up subscriber for the low battery procedure
 		self.battery_warning_sub = rospy.Subscriber('/battery_warning', String, self.warning_callback)
->>>>>>> 697ab5f26fcbb2b113aeff5e1b6636604445dd35
 
 		# Wait to connect with Breadcrumb (Warning, you code might get stuck in here if breadcrumb is not running)
 		# Code will error if you try to connect to a service
@@ -210,7 +207,7 @@ class Guidance():
 		# rospy.loginfo("Updating Pose UAV...")
 		self.current_location = msg_in.pose.position
 
-	def self.warning_callback(self, msg)
+	def warning_callback(self, msg):
 		self.low_battery = True
 		rospy.loginfo(f"Received warning: {msg.data}")
 		self.spar_client.cancel_goal()
