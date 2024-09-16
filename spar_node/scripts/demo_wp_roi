@@ -48,6 +48,8 @@ class Guidance():
 		# This will stop our "waypoint is reached" callback from firing
 		# during the roi diversion and taking over our flight!
 		self.performing_roi = False
+		# Low battery flag
+		self.low_battery = False
 
 		# Save the input waypoints
 		self.waypoints = waypoints
