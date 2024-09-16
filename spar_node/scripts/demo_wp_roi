@@ -208,9 +208,11 @@ class Guidance():
 		self.current_location = msg_in.pose.position
 
 	def warning_callback(self, msg):
+		if self.low_battery == False:
+			self.nextWaypointIndex = (len(self.waypoints))
 		self.low_battery = True
 		rospy.loginfo(f"Received warning: {msg.data}")
-		self.spar_client.cancel_goal()
+		#self.spar_client.cancel_goal()
 		
 
 	# This function will fire whenever a ROI pose message is sent
@@ -348,8 +350,8 @@ class Guidance():
 		# If we're performing the ROI diversion, then don't do
 		# anything here, as this is handled in that function
 		#rospy.loginfo("Checking WP Progress")
-		if self.low_battery == True:
-			self.nextWaypointIndex = (len(self.waypoints))
+		# if self.low_battery == True:
+		# 	self.nextWaypointIndex = (len(self.waypoints))
 		if not self.performing_roi:
 			#rospy.loginfo("NOT ROI")
 			# If the last segment has succeeded.
@@ -427,7 +429,6 @@ class Guidance():
 					# Else the mission is over, shutdown and quit the node
 					# XXX:	This could be used to restart the mission back to the
 					#		first waypoint instead to restart the mission
-					
 					aruco_transforms = self.get_existing_aruco_transforms()
 					if aruco_transforms:
 						# Get the first ArUco marker (the key-value pair) in the dictionary
@@ -443,6 +444,7 @@ class Guidance():
 					else:
 						rospy.loginfo("No ArUco markers found.")
 					self.nextWaypointIndex += 1
+					
 				else:
 					self.land()
 					rospy.sleep(rospy.Duration(10))
