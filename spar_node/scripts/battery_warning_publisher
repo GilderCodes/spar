@@ -24,6 +24,7 @@ class BatteryMonitor:
             warning_msg = f"Warning: Battery voltage low! ({voltage:.2f} V)"
             self.battery_warning_publisher.publish(warning_msg)
             rospy.logwarn(warning_msg)
+            self.warning_published = True
 
     def run(self):
         rospy.spin()
