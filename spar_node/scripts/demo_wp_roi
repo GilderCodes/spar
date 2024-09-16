@@ -48,6 +48,8 @@ class Guidance():
 		# This will stop our "waypoint is reached" callback from firing
 		# during the roi diversion and taking over our flight!
 		self.performing_roi = False
+		# Low battery flag
+		self.low_battery = False
 
 		# Save the input waypoints
 		self.waypoints = waypoints
@@ -77,8 +79,13 @@ class Guidance():
 		self.pay_pub = rospy.Publisher('/payload_deployment', String, queue_size=10)
 		self.pay_sub = rospy.Subscriber('/roi_detection', Float32MultiArray, self.roi_callback)
 
+<<<<<<< HEAD
 		# Speaker Options
 		self.speak = rospy.Publisher('/speak', String, queue_size=10)
+=======
+		# Set up subscriber for the low battery procedure
+		self.battery_warning_sub = rospy.Subscriber('/battery_warning', String, self.warning_callback)
+>>>>>>> 697ab5f26fcbb2b113aeff5e1b6636604445dd35
 
 		# Wait to connect with Breadcrumb (Warning, you code might get stuck in here if breadcrumb is not running)
 		# Code will error if you try to connect to a service
@@ -203,6 +210,11 @@ class Guidance():
 		# rospy.loginfo("Updating Pose UAV...")
 		self.current_location = msg_in.pose.position
 
+	def self.warning_callback(self, msg)
+		self.low_battery = True
+		rospy.loginfo(f"Received warning: {msg.data}")
+		self.spar_client.cancel_goal()
+		
 
 	# This function will fire whenever a ROI pose message is sent
 	# It is also responsible for handling the ROI "inspection task"
@@ -339,6 +351,8 @@ class Guidance():
 		# If we're performing the ROI diversion, then don't do
 		# anything here, as this is handled in that function
 		#rospy.loginfo("Checking WP Progress")
+		if self.low_battery == True:
+			self.nextWaypointIndex = (len(self.waypoints))
 		if not self.performing_roi:
 			#rospy.loginfo("NOT ROI")
 			# If the last segment has succeeded.

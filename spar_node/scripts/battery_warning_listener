@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+import rospy
+from std_msgs.msg import String
+
+# listener node
+class BatteryWarningHandler:
+    def __init__(self):
+        rospy.init_node('battery_warning_handler', anonymous=True)
+        self.battery_warning_subscriber = rospy.Subscriber('/battery_warning', String, self.warning_callback)
+
+    def warning_callback(self, msg):
+        rospy.loginfo(f"Received Battery Warning: {msg.data}")
+        self.handle_battery_warning(msg.data)
+
+    def handle_battery_warning(self, warning_message):
+        # Define the logic for handling battery warnings
+        rospy.loginfo(f"Handling low battery: {warning_message}")
+        # Add logic to stop the UAV, initiate landing, etc.
+    
+    def run(self):
+        rospy.spin()
+
+if __name__ == '__main__':
+    try:
+        handler = BatteryWarningHandler()
+        handler.run()
+    except rospy.ROSInterruptException:
+        pass
