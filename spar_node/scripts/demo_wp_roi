@@ -79,6 +79,11 @@ class Guidance():
 		self.pay_pub = rospy.Publisher('/payload_deployment', String, queue_size=10)
 		self.pay_sub = rospy.Subscriber('/roi_detection', Float32MultiArray, self.roi_callback)
 
+		# Speaker Options
+		self.speak = rospy.Publisher('/speak', String, queue_size=10)
+		# Set up subscriber for the low battery procedure
+		self.battery_warning_sub = rospy.Subscriber('/battery_warning', String, self.warning_callback)
+
 		# Wait to connect with Breadcrumb (Warning, you code might get stuck in here if breadcrumb is not running)
 		# Code will error if you try to connect to a service
 		# that does not exist
@@ -89,6 +94,9 @@ class Guidance():
 		if not rospy.is_shutdown():
 			# Good to go, start mission
 			rospy.loginfo("Starting waypoint mission")
+			message = "Flying to ArUco Landing location"
+			self.speak.publish(message)
+
 
 			# Setup first waypoint segment
 			# XXX:	Another option would be to do "takeoff" and leave "nextWaypointIndex = 0" to
@@ -199,12 +207,19 @@ class Guidance():
 		# rospy.loginfo("Updating Pose UAV...")
 		self.current_location = msg_in.pose.position
 
+	def warning_callback(self, msg):
+		self.low_battery = True
+		rospy.loginfo(f"Received warning: {msg.data}")
+		self.spar_client.cancel_goal()
+		
 
 	# This function will fire whenever a ROI pose message is sent
 	# It is also responsible for handling the ROI "inspection task"
 	def callback_inspect_roi(self, msg_in):
 		# Set our flag that we are performing the diversion
 		self.performing_roi = True
+		message = "Starting diversion"
+		self.speak.publish(message)
 
 		rospy.loginfo("Starting diversion to ROI...")
 		# Cancel the current goal (if there is one)
@@ -237,6 +252,8 @@ class Guidance():
 			return
 
 		rospy.loginfo("Reached diversion ROI!")
+		message = f"Dropping Payload: {self.pay_item}"
+		self.speak.publish(message)
 		# XXX: Do something?
 		msg = String()
 		if self.pay_item == "Backpack":
@@ -255,6 +272,8 @@ class Guidance():
 		rospy.sleep(rospy.Duration(10))
 
 		rospy.loginfo("Returning to flight plan...")
+		message = "Returning to Flight Path"
+		self.speak.publish(message)
 		rospy.loginfo(f"RWP: {rwp}")
 		self.send_wp(rwp)
 		self.spar_client.wait_for_result()
@@ -329,6 +348,8 @@ class Guidance():
 		# If we're performing the ROI diversion, then don't do
 		# anything here, as this is handled in that function
 		#rospy.loginfo("Checking WP Progress")
+		if self.low_battery == True:
+			self.nextWaypointIndex = (len(self.waypoints))
 		if not self.performing_roi:
 			#rospy.loginfo("NOT ROI")
 			# If the last segment has succeeded.
@@ -426,12 +447,21 @@ class Guidance():
 					# 	# Print or use the coordinates
 					# 	rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
 					# 	self.send_wp(arucoWP)
+						# Extract the x, y, z coordinates
+						# arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], 0.5, 0]
+						# # Print or use the coordinates
+						# rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
+						# message = "Flying to ArUco Landing location"
+						# self.speak.publish(message)
+						# self.send_wp(arucoWP)
 					else:
 						rospy.loginfo("No ArUco markers found.")
 					self.nextWaypointIndex += 1
 				else:
 					self.land()
 					rospy.sleep(rospy.Duration(10))
+					message = "Misison Complete"
+					self.speak.publish(message)
 					rospy.loginfo("Mission complete!")
 					rospy.signal_shutdown("Complete, Wooh!")
 			elif (self.spar_client.get_state() == GoalStatus.PREEMPTED) or (self.spar_client.get_state() == GoalStatus.ABORTED) or (self.spar_client.get_state() == GoalStatus.REJECTED):
@@ -557,14 +587,14 @@ def main(args):
 		   [ 0.5, 2.0, surveyAltitude, 0.0],
 		   [ -0.5, 2.0, surveyAltitude, 0.0],
 		   [ -0.5, -2.0, surveyAltitude, 0.0],
-		   [-1.5, -2.0, surveyAltitude, 0.0],
-		   [-1.5, 2.0, surveyAltitude, 0.0],
-		   [-2.5, 2.0, surveyAltitude, 0.0],
-		   [-2.5, -2.0, surveyAltitude, 0.0],
-		   [-3.5, -2.0, surveyAltitude, 0.0],
-		   [-3.5, 2.0, surveyAltitude, 0.0],
-		   [0.0, 0.0, surveyAltitude, 0.0],
-		   [0.0, 0.0, surveyAltitude, 0.0],
+		#    [-1.5, -2.0, surveyAltitude, 0.0],
+		#    [-1.5, 2.0, surveyAltitude, 0.0],
+		#    [-2.5, 2.0, surveyAltitude, 0.0],
+		#    [-2.5, -2.0, surveyAltitude, 0.0],
+		#    [-3.5, -2.0, surveyAltitude, 0.0],
+		#    [-3.5, 2.0, surveyAltitude, 0.0],
+		#    [0.0, 0.0, surveyAltitude, 0.0],
+		#    [0.0, 0.0, surveyAltitude, 0.0],
 		   ]
 
 	# Create our guidance class option
