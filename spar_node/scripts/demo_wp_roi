@@ -495,8 +495,12 @@ class Guidance():
 		pub_path.publish(msg)
 
 	def get_aruco_transform(self, aruco_id):
-		# Lookup the transform from "map" to the specific ArUco frame
+		try:
+			# Lookup the transform from "map" to the specific ArUco frame
 			aruco_frame = f"ArUco_{aruco_id}"
+			rospy.logerr(aruco_frame)
+			tf_buffer = tf2_ros.Buffer()
+			listener = tf2_ros.TransformListener(tf_buffer)
 			transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
 
 			# Extract the translation (position) and rotation (orientation)
@@ -516,6 +520,20 @@ class Guidance():
 				'qz': rotation.z,
 				'qw': rotation.w
 			}
+
+		except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+			rospy.logwarn(f"Transform for ArUco_{aruco_id} not found. Returning default waypoint.")
+			# Return the default waypoint if the transform lookup fails
+			return {
+				'x': 0.0,
+				'y': 0.0,
+				'z': self.surveyAltitude,
+				'qx': 0.0,
+				'qy': 0.0,
+				'qz': 0.0,
+				'qw': 1.0  # Default orientation (no rotation)
+			}
+
 
 	# def get_existing_aruco_transforms(self):
 	# 	# Create a tf2 buffer and listener

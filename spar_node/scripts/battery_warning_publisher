@@ -13,6 +13,7 @@ class BatteryMonitor:
         rospy.init_node('battery_monitor', anonymous=True)
         self.battery_warning_publisher = rospy.Publisher('/battery_warning', String, queue_size=10)
         rospy.Subscriber('/mavros/battery', BatteryState, self.battery_callback)
+        rospy.loginfo("Battery Monitor node is running...")  # Log message after starting the node
 
     def battery_callback(self, msg):
         voltage = msg.voltage
