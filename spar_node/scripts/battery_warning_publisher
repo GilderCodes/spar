@@ -6,7 +6,7 @@ from std_msgs.msg import String
 
 # publisher node
 # change to around 9.35V
-VOLTAGE_THRESHOLD = 10.5  # Example threshold for low battery
+VOLTAGE_THRESHOLD = 9.7  # Example threshold for low battery
 
 class BatteryMonitor:
     def __init__(self):
@@ -15,10 +15,12 @@ class BatteryMonitor:
         rospy.Subscriber('/mavros/battery', BatteryState, self.battery_callback)
         rospy.loginfo("Battery Monitor node is running...")  # Log message after starting the node
 
+        self.warning_published = False  # To ensure the message is published only once
+
     def battery_callback(self, msg):
         voltage = msg.voltage
         rospy.loginfo(f"Battery Voltage: {voltage:.2f} V")
-        if voltage < VOLTAGE_THRESHOLD:
+        if voltage < VOLTAGE_THRESHOLD and not self.warning_published:
             warning_msg = f"Warning: Battery voltage low! ({voltage:.2f} V)"
             self.battery_warning_publisher.publish(warning_msg)
             rospy.logwarn(warning_msg)
