@@ -407,16 +407,25 @@ class Guidance():
 					# XXX:	This could be used to restart the mission back to the
 					#		first waypoint instead to restart the mission
 					
-					aruco_transforms = self.get_existing_aruco_transforms()
-					if aruco_transforms:
-						# Get the first ArUco marker (the key-value pair) in the dictionary
-						first_aruco_id, first_aruco_transform = next(iter(aruco_transforms.items()))
+					# aruco_transforms = self.get_existing_aruco_transforms()
+					ArUcoID = 1
+					transform_data = self.get_aruco_transform(ArUcoID)
+					if transform_data is not None:
+						ArUcoX = transform_data['x']
+						ArUcoY = transform_data['y']
+						ArUcoZ = transform_data['z']
 
-						# Extract the x, y, z coordinates
-						arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], self.surveyAltitude, 0]
-						# Print or use the coordinates
-						rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
-						self.send_wp(arucoWP)
+						ArUcoWP = [ArUcoX, ArUcoY, 0.2, 0.0]
+						self.send_wp(ArUcoWP)
+					# if aruco_transforms:
+					# 	# Get the first ArUco marker (the key-value pair) in the dictionary
+					# 	first_aruco_id, first_aruco_transform = next(iter(aruco_transforms.items()))
+
+					# 	# Extract the x, y, z coordinates
+					# 	arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], self.surveyAltitude, 0]
+					# 	# Print or use the coordinates
+					# 	rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
+					# 	self.send_wp(arucoWP)
 					else:
 						rospy.loginfo("No ArUco markers found.")
 					self.nextWaypointIndex += 1
@@ -452,60 +461,83 @@ class Guidance():
 		rospy.loginfo("Publishing path...")
 		pub_path.publish(msg)
 
-	def get_existing_aruco_transforms(self):
-		# Create a tf2 buffer and listener
-		tf_buffer = tf2_ros.Buffer()
-		listener = tf2_ros.TransformListener(tf_buffer)
+	def get_aruco_transform(self, aruco_id):
+		# Lookup the transform from "map" to the specific ArUco frame
+			aruco_frame = f"ArUco_{aruco_id}"
+			transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
 
-		# Allow some time for the listener to fill with transforms
-		rospy.sleep(2)  # Adjust this if needed to allow buffering time
+			# Extract the translation (position) and rotation (orientation)
+			translation = transform.transform.translation
+			rotation = transform.transform.rotation
 
-		marker_transforms = {}
+			# Log the retrieved information
+			rospy.loginfo(f"ArUco_{aruco_id} Transform: Translation (x: {translation.x}, y: {translation.y}, z: {translation.z}), "
+						f"Rotation (qx: {rotation.x}, qy: {rotation.y}, qz: {rotation.z}, qw: {rotation.w})")
 
-		try:
-			# Get all available transforms from the buffer
-			frames = tf_buffer.all_frames_as_string()
-			rospy.loginfo(frames)
+			return {
+				'x': translation.x,
+				'y': translation.y,
+				'z': translation.z,
+				'qx': rotation.x,
+				'qy': rotation.y,
+				'qz': rotation.z,
+				'qw': rotation.w
+			}
 
-			# Extract just the frame names from the detailed string output
-			lines = frames.splitlines()
-			aruco_frames = []
+	# def get_existing_aruco_transforms(self):
+	# 	# Create a tf2 buffer and listener
+	# 	tf_buffer = tf2_ros.Buffer()
+	# 	listener = tf2_ros.TransformListener(tf_buffer)
 
-			for line in lines:
-				if "ArUco_" in line:
-					# Extract the frame name by splitting the line
-					frame = line.split()[1]  # "Frame ArUco_54" -> "ArUco_54"
-					aruco_frames.append(frame)
+	# 	# Allow some time for the listener to fill with transforms
+	# 	rospy.sleep(2)  # Adjust this if needed to allow buffering time
 
-			rospy.loginfo(aruco_frames)
+	# 	marker_transforms = {}
 
-			for aruco_frame in aruco_frames:
-				aruco_id = aruco_frame.split('_')[1]  # Extract the ArUco ID
+	# 	try:
+	# 		# Get all available transforms from the buffer
+	# 		frames = tf_buffer.all_frames_as_string()
+	# 		rospy.loginfo(frames)
 
-				# Lookup the transform from "map" to the ArUco frame
-				transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
+	# 		# Extract just the frame names from the detailed string output
+	# 		lines = frames.splitlines()
+	# 		aruco_frames = []
 
-				# Extract the translation (position) and rotation (orientation)
-				translation = transform.transform.translation
-				rotation = transform.transform.rotation
+	# 		for line in lines:
+	# 			if "ArUco_" in line:
+	# 				# Extract the frame name by splitting the line
+	# 				frame = line.split()[1]  # "Frame ArUco_54" -> "ArUco_54"
+	# 				aruco_frames.append(frame)
 
-				# Log the retrieved information
-				rospy.loginfo(f"{aruco_frame} Transform: Translation (x: {translation.x}, y: {translation.y}")
+	# 		rospy.loginfo(aruco_frames)
 
-				marker_transforms[aruco_id] = {
-					'x': translation.x,
-					'y': translation.y,
-					'z': translation.z,
-					'qx': rotation.x,
-					'qy': rotation.y,
-					'qz': rotation.z,
-					'qw': rotation.w
-				}
+	# 		for aruco_frame in aruco_frames:
+	# 			aruco_id = aruco_frame.split('_')[1]  # Extract the ArUco ID
 
-		except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-			rospy.logwarn(f"Error retrieving transforms: {e}")
+	# 			# Lookup the transform from "map" to the ArUco frame
+	# 			transform = tf_buffer.lookup_transform("map", aruco_frame, rospy.Time(0), rospy.Duration(2.0))
 
-		return marker_transforms
+	# 			# Extract the translation (position) and rotation (orientation)
+	# 			translation = transform.transform.translation
+	# 			rotation = transform.transform.rotation
+
+	# 			# Log the retrieved information
+	# 			rospy.loginfo(f"{aruco_frame} Transform: Translation (x: {translation.x}, y: {translation.y}")
+
+	# 			marker_transforms[aruco_id] = {
+	# 				'x': translation.x,
+	# 				'y': translation.y,
+	# 				'z': translation.z,
+	# 				'qx': rotation.x,
+	# 				'qy': rotation.y,
+	# 				'qz': rotation.z,
+	# 				'qw': rotation.w
+	# 			}
+
+	# 	except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+	# 		rospy.logwarn(f"Error retrieving transforms: {e}")
+
+	# 	return marker_transforms
 
 
 
