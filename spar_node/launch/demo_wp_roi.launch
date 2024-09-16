@@ -2,7 +2,7 @@
 <launch>
 	<node name="guidance" pkg="spar_node" type="demo_wp_roi" respawn="false" output="screen">
 		<!-- Survey Altitude -->
-		<param name="surveyAlt" type="double" value="2" /> #added for demo_wp_roi altitude, seen at bottom of demo_wp_roi script | altitude parameter
+		<param name="surveyAlt" type="double" value="1.2" /> #added for demo_wp_roi altitude, seen at bottom of demo_wp_roi script | altitude parameter
 
 		<param name="vel_yaw" type="double" value="0.2" />
 		<!-- Linear and yaw motion velocities -->
@@ -22,9 +22,9 @@
 		<param name="action_topic" type="string" value="spar/flight" />
 
 		<!-- Remappings -->
-		<remap from="~pose" to="uavasr/pose" />
+		<!-- remap from="~pose" to="uavasr/pose" /-->
 		<!-- Return to this for the demo -->
-		<!-- remap from="~pose" to="mavros/local_position/pose" /-->
+		<remap from="~pose" to="mavros/local_position/pose" />
 		<remap from="~roi" to="target_detection/roi" />
 	</node>
 </launch>

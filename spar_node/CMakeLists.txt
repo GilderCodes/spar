@@ -177,6 +177,7 @@ catkin_install_python(PROGRAMS
   scripts/tf2_broadcaster_target
   scripts/tf2_listener
   scripts/spar_client_monitor.py
+  scripts/battery_warning_publisher
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
