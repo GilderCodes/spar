@@ -79,6 +79,9 @@ class Guidance():
 		self.pay_pub = rospy.Publisher('/payload_deployment', String, queue_size=10)
 		self.pay_sub = rospy.Subscriber('/roi_detection', Float32MultiArray, self.roi_callback)
 
+		# Set up subscriber for the low battery procedure
+		self.battery_warning_subscriber = rospy.Subscriber('/battery_warning', String, self.warning_callback)
+
 		# Wait to connect with Breadcrumb (Warning, you code might get stuck in here if breadcrumb is not running)
 		# Code will error if you try to connect to a service
 		# that does not exist
