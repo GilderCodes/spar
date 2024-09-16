@@ -77,6 +77,9 @@ class Guidance():
 		self.pay_pub = rospy.Publisher('/payload_deployment', String, queue_size=10)
 		self.pay_sub = rospy.Subscriber('/roi_detection', Float32MultiArray, self.roi_callback)
 
+		# Speaker Options
+		self.speak = rospy.Publisher('/speak', String, queue_size=10)
+
 		# Wait to connect with Breadcrumb (Warning, you code might get stuck in here if breadcrumb is not running)
 		# Code will error if you try to connect to a service
 		# that does not exist
@@ -87,6 +90,9 @@ class Guidance():
 		if not rospy.is_shutdown():
 			# Good to go, start mission
 			rospy.loginfo("Starting waypoint mission")
+			message = "Flying to ArUco Landing location"
+			self.speak.publish(message)
+
 
 			# Setup first waypoint segment
 			# XXX:	Another option would be to do "takeoff" and leave "nextWaypointIndex = 0" to
@@ -203,6 +209,8 @@ class Guidance():
 	def callback_inspect_roi(self, msg_in):
 		# Set our flag that we are performing the diversion
 		self.performing_roi = True
+		message = "Starting diversion"
+		self.speak.publish(message)
 
 		rospy.loginfo("Starting diversion to ROI...")
 		# Cancel the current goal (if there is one)
@@ -235,6 +243,8 @@ class Guidance():
 			return
 
 		rospy.loginfo("Reached diversion ROI!")
+		message = f"Dropping Payload: {self.pay_item}"
+		self.speak.publish(message)
 		# XXX: Do something?
 		msg = String()
 		if self.pay_item == "Backpack":
@@ -253,6 +263,8 @@ class Guidance():
 		rospy.sleep(rospy.Duration(10))
 
 		rospy.loginfo("Returning to flight plan...")
+		message = "Returning to Flight Path"
+		self.speak.publish(message)
 		rospy.loginfo(f"RWP: {rwp}")
 		self.send_wp(rwp)
 		self.spar_client.wait_for_result()
@@ -411,9 +423,11 @@ class Guidance():
 						first_aruco_id, first_aruco_transform = next(iter(aruco_transforms.items()))
 
 						# Extract the x, y, z coordinates
-						arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], self.surveyAltitude, 0]
+						arucoWP = [first_aruco_transform['x'], first_aruco_transform['y'], 0.5, 0]
 						# Print or use the coordinates
 						rospy.loginfo(f"First ArUco ID: {first_aruco_id}")
+						message = "Flying to ArUco Landing location"
+						self.speak.publish(message)
 						self.send_wp(arucoWP)
 					else:
 						rospy.loginfo("No ArUco markers found.")
@@ -421,6 +435,8 @@ class Guidance():
 				else:
 					self.land()
 					rospy.sleep(rospy.Duration(10))
+					message = "Misison Complete"
+					self.speak.publish(message)
 					rospy.loginfo("Mission complete!")
 					rospy.signal_shutdown("Complete, Wooh!")
 			elif (self.spar_client.get_state() == GoalStatus.PREEMPTED) or (self.spar_client.get_state() == GoalStatus.ABORTED) or (self.spar_client.get_state() == GoalStatus.REJECTED):
@@ -523,14 +539,14 @@ def main(args):
 		   [ 0.5, 2.0, surveyAltitude, 0.0],
 		   [ -0.5, 2.0, surveyAltitude, 0.0],
 		   [ -0.5, -2.0, surveyAltitude, 0.0],
-		   [-1.5, -2.0, surveyAltitude, 0.0],
-		   [-1.5, 2.0, surveyAltitude, 0.0],
-		   [-2.5, 2.0, surveyAltitude, 0.0],
-		   [-2.5, -2.0, surveyAltitude, 0.0],
-		   [-3.5, -2.0, surveyAltitude, 0.0],
-		   [-3.5, 2.0, surveyAltitude, 0.0],
-		   [0.0, 0.0, surveyAltitude, 0.0],
-		   [0.0, 0.0, surveyAltitude, 0.0],
+		#    [-1.5, -2.0, surveyAltitude, 0.0],
+		#    [-1.5, 2.0, surveyAltitude, 0.0],
+		#    [-2.5, 2.0, surveyAltitude, 0.0],
+		#    [-2.5, -2.0, surveyAltitude, 0.0],
+		#    [-3.5, -2.0, surveyAltitude, 0.0],
+		#    [-3.5, 2.0, surveyAltitude, 0.0],
+		#    [0.0, 0.0, surveyAltitude, 0.0],
+		#    [0.0, 0.0, surveyAltitude, 0.0],
 		   ]
 
 	# Create our guidance class option
