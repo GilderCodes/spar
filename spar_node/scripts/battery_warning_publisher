@@ -6,7 +6,7 @@ from std_msgs.msg import String
 
 # publisher node
 # change to around 9.35V
-VOLTAGE_THRESHOLD = 9.7  # Example threshold for low battery
+VOLTAGE_THRESHOLD = 9.5  # Example threshold for low battery
 
 class BatteryMonitor:
     def __init__(self):

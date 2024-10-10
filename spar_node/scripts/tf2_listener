@@ -15,36 +15,40 @@ tfln = None
 pub_roi = None
 
 def callback_target_found(msg_in):
-	# We recieved a "found" timestamp
-	# attempt to find the transformation
-	try:
-		# Lookup transform from "map" to "target" at time "msg_in.data",
-		# and allow for 0.5 seconds to collected any additionally needed data
-		t = tfBuffer.lookup_transform("map", "target", rospy.Time(0), rospy.Duration(0.5))
+    target_time = msg_in.data
+    current_time = rospy.Time.now()
+    time_since_detection = current_time - target_time
+    adjusted_time = current_time - time_since_detection
 
-		# Dump information to screen
-		rospy.loginfo("Found target at the following location in the world:")
-		# This is the information that we want for the ROI.
-		rospy.loginfo("[x: %0.2f; y: %0.2f; z: %0.2f]" % (t.transform.translation.x,
-														  t.transform.translation.y,
-														  t.transform.translation.z))
-		rospy.loginfo("Sending ROI to target found coordinates...")
-		pose = PoseStamped()
-		pose.pose.position.x = t.transform.translation.x
-		pose.pose.position.y = t.transform.translation.y
-		pose.pose.position.z = t.transform.translation.z
-		# Changed to zero so it is never out of the area if there is a bad transform
-		
-		pose.pose.orientation.w = 1.0
-		pose.pose.orientation.x = 0.0
-		pose.pose.orientation.y = 0.0
-		pose.pose.orientation.z = 0.0
-		
-		pub_roi.publish(pose)
-		rospy.loginfo("ROI coordinates sent.")
-		
-	except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-		rospy.logwarn(e)
+    rospy.loginfo(f"Received target_found message with timestamp: {target_time.to_sec()}")
+    rospy.loginfo(f"Adjusted time for lookup: {adjusted_time.to_sec()}")
+    
+    try:
+        t = tfBuffer.lookup_transform("map", "target", adjusted_time, rospy.Duration(0.1))
+
+        rospy.loginfo("Found target at the following location in the world:")
+        rospy.loginfo("[x: %0.2f; y: %0.2f; z: %0.2f]" % (t.transform.translation.x,
+                                                          t.transform.translation.y,
+                                                          t.transform.translation.z))
+        rospy.loginfo("Sending ROI to target found coordinates...")
+        pose = PoseStamped()
+        pose.header.stamp = adjusted_time
+        pose.header.frame_id = "map"
+        pose.pose.position.x = t.transform.translation.x
+        pose.pose.position.y = t.transform.translation.y
+        pose.pose.position.z = t.transform.translation.z
+        
+        pose.pose.orientation.w = 1.0
+        pose.pose.orientation.x = 0.0
+        pose.pose.orientation.y = 0.0
+        pose.pose.orientation.z = 0.0
+        
+        pub_roi.publish(pose)
+        rospy.loginfo(f"ROI coordinates sent for adjusted time: {adjusted_time.to_sec()}")
+        
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+        rospy.logwarn(f"Failed to lookup transform: {e}")
+        rospy.logwarn(f"Adjusted time: {adjusted_time.to_sec()}, Current time: {current_time.to_sec()}")
 
 if __name__ == '__main__':
 	rospy.init_node('tf2_listener')
